@@ -5,3 +5,4 @@ xgboost
 numpy
 pydantic
 joblib
+xgboost

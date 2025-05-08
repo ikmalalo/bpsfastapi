@@ -3,12 +3,16 @@ from pydantic import BaseModel
 from typing import Optional
 import joblib
 import numpy as np
+import xgboost as xgb
 
 # Inisialisasi FastAPI
 app = FastAPI()
 
-# Muat model XGBoost yang telah dilatih dan scaler
-model = joblib.load('xgboost_model_tuned.pkl')
+# Muat model XGBoost yang telah disimpan dalam format .json
+model = xgb.Booster()
+model.load_model('xgboost_model.json')
+
+# Muat scaler yang sudah disimpan
 scaler = joblib.load('scaler.pkl')
 
 # Membuat model Pydantic untuk validasi input data
@@ -26,7 +30,7 @@ class SalesData(BaseModel):
 
 @app.post("/predict")
 def predict_sales(data: SalesData):
-    # Mengubah input data menjadi array
+    # Mengubah input data menjadi dictionary
     data_dict = data.dict()
 
     # Pilih hanya 9 fitur yang relevan sesuai dengan yang digunakan oleh scaler
@@ -43,8 +47,11 @@ def predict_sales(data: SalesData):
     # Lakukan scaling terhadap input data
     scaled_data = scaler.transform(input_data)
 
+    # Ubah scaled_data menjadi DMatrix
+    dmatrix_data = xgb.DMatrix(scaled_data)
+
     # Prediksi menggunakan model
-    prediction = model.predict(scaled_data)
+    prediction = model.predict(dmatrix_data)
 
     # Tentukan tahun prediksi berdasarkan input (misal, jika data input tahun 2022, maka hasilnya 2023)
     tahun_prediksi = 2023  # Untuk tahun berikutnya setelah data 2022
