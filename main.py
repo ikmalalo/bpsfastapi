@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -8,6 +9,14 @@ import os
 
 # Inisialisasi FastAPI
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Atau ganti misal: ["https://webkamu.com"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Tentukan path model dan scaler
 model_path = os.path.join(os.getcwd(), 'xgboost_model.json')
@@ -68,8 +77,5 @@ def predict_sales(data: SalesData):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during prediction: {str(e)}")
 
-    # Tentukan tahun prediksi berdasarkan input (misal, jika data input tahun 2022, maka hasilnya 2023)
-    tahun_prediksi = 2023  # Untuk tahun berikutnya setelah data 2022
-
-    # Pastikan hasil prediksi dikembalikan sebagai tipe data standar Python (float)
-    return {"tahun_prediksi": tahun_prediksi, "prediksi_penjualan": float(prediction[0])}  # Menambahkan tahun prediksi
+    # Kembalikan hasil prediksi
+    return {"prediksi_penjualan": float(prediction[0])}
