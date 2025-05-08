@@ -1,19 +1,28 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import joblib
 import numpy as np
 import xgboost as xgb
+import os
 
 # Inisialisasi FastAPI
 app = FastAPI()
 
-# Muat model XGBoost yang telah disimpan dalam format .json
-model = xgb.Booster()
-model.load_model('xgboost_model.json')
+# Tentukan path model dan scaler
+model_path = os.path.join(os.getcwd(), 'xgboost_model.json')
+scaler_path = os.path.join(os.getcwd(), 'scaler.pkl')
 
-# Muat scaler yang sudah disimpan
-scaler = joblib.load('scaler.pkl')
+# Pastikan model XGBoost ada
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"Model file '{model_path}' not found.")
+model = xgb.Booster()
+model.load_model(model_path)  # Menggunakan path yang benar untuk model
+
+# Pastikan scaler ada
+if not os.path.exists(scaler_path):
+    raise FileNotFoundError(f"Scaler file '{scaler_path}' not found.")
+scaler = joblib.load(scaler_path)  # Menggunakan path yang benar untuk scaler
 
 # Membuat model Pydantic untuk validasi input data
 class SalesData(BaseModel):
@@ -45,13 +54,19 @@ def predict_sales(data: SalesData):
                             data_dict['Quarter_Q3']]])  # Mengabaikan Quarter_Q4
     
     # Lakukan scaling terhadap input data
-    scaled_data = scaler.transform(input_data)
+    try:
+        scaled_data = scaler.transform(input_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during scaling: {str(e)}")
 
     # Ubah scaled_data menjadi DMatrix
     dmatrix_data = xgb.DMatrix(scaled_data)
 
     # Prediksi menggunakan model
-    prediction = model.predict(dmatrix_data)
+    try:
+        prediction = model.predict(dmatrix_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during prediction: {str(e)}")
 
     # Tentukan tahun prediksi berdasarkan input (misal, jika data input tahun 2022, maka hasilnya 2023)
     tahun_prediksi = 2023  # Untuk tahun berikutnya setelah data 2022
